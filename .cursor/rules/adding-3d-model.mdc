@@ -1,0 +1,426 @@
+---
+description: When creating new model components that need positional audio, textures, and Leva controls in a React Three Fiber project, follow the pattern in this file.
+alwaysApply: false
+---
+
+# Adding 3D Models with Positional Audio
+
+This guide explains how to add new 3D models with positional audio to the underwater scene, following the pattern established by `PatricioModel.tsx`.
+
+## 📋 Prerequisites
+
+- A `.glb` or `.gltf` model file
+- Optional: Texture files (`.png`, `.jpg`) for the model
+- Optional: Audio file (`.mp3`, `.wav`) for positional audio
+
+## 🗂️ File Structure
+
+```
+app/
+├── components/
+│   └── models/
+│       └── YourModel.tsx      # Your new model component
+├── hooks/
+│   └── usePositionalAudio.ts  # Reusable audio hook
+public/
+├── models/
+│   └── your-model.glb         # Your 3D model file
+├── textures/
+│   ├── your-model_color.png   # Color texture (optional)
+│   └── your-model_normal.png  # Normal map (optional)
+└── audio/
+    └── your-model.mp3         # Audio file (optional)
+```
+
+## 🎯 Step-by-Step Guide
+
+### 1. Prepare Your Assets
+
+#### Model File
+- Place your `.glb` file in `public/models/`
+- Ensure the model is properly scaled and oriented
+- Test the model in a 3D viewer if possible
+
+#### Textures (Optional)
+- Place texture files in `public/textures/`
+- Common texture types:
+  - `_color.png` - Diffuse/color texture
+  - `_normal.png` - Normal map for surface detail
+  - `_roughness.png` - Roughness map
+  - `_metallic.png` - Metallic map
+
+#### Audio (Optional)
+- Place audio file in `public/audio/`
+- Use `.mp3` format for best compatibility
+- Keep file size reasonable (< 5MB recommended)
+
+### 2. Create the Model Component
+
+Create a new file `app/components/models/YourModel.tsx`:
+
+```tsx
+'use client'
+import { useEffect, useRef } from 'react'
+import { useFrame } from '@react-three/fiber'
+import { PositionalAudio, useGLTF, useTexture } from '@react-three/drei'
+import { useControls } from 'leva'
+import { usePositionalAudio } from '../hooks/usePositionalAudio'
+import * as THREE from 'three'
+
+export default function YourModel(props: any) {
+    // Load the 3D model
+    const { scene } = useGLTF('/models/your-model.glb')
+    
+    // Load textures (optional)
+    const [colorMap, normalMap] = useTexture([
+        '/textures/your-model_color.png',
+        '/textures/your-model_normal.png',
+    ])
+
+    // Configure positional audio (optional)
+    const { sound, checkDistanceAndPlay, audioUrl } = usePositionalAudio({
+        audioUrl: '/audio/your-model.mp3',
+        triggerDistance: 8,    // Distance to start playing
+        refDistance: 2,        // Distance for max volume
+        maxDistance: 8,        // Distance where audio stops
+        rolloffFactor: 1,      // How quickly volume decreases
+        loop: false            // Whether to loop the audio
+    })
+
+    // Get initial values from props or use defaults
+    const initialPosition = props.position || [0, 0, 0]
+    const initialScale = props.scale || 0.2
+
+    // CRITICAL: Ref to track the actual rendered model position
+    // This ensures audio triggers from the correct world position
+    const modelRef = useRef<THREE.Object3D>(null!)
+
+    // Leva controls for model rotation (optional)
+    const { rotationX, rotationY, rotationZ } = useControls('Your Model', {
+        rotationX: { value: 0, min: -Math.PI, max: Math.PI, step: 0.01, label: 'Rotation X' },
+        rotationY: { value: 0, min: -Math.PI, max: Math.PI, step: 0.01, label: 'Rotation Y' },
+        rotationZ: { value: 0, min: -Math.PI, max: Math.PI, step: 0.01, label: 'Rotation Z' }
+    })
+
+    // Leva controls for model position - use props as initial values
+    const { positionX, positionY, positionZ } = useControls('Your Model', {
+        positionX: { value: initialPosition[0], min: -20, max: 20, step: 0.1, label: 'Position X' },
+        positionY: { value: initialPosition[1], min: -20, max: 20, step: 0.1, label: 'Position Y' },
+        positionZ: { value: initialPosition[2], min: -20, max: 20, step: 0.1, label: 'Position Z' }
+    })
+
+    // Leva controls for model scale - use props as initial value
+    const { scale } = useControls('Your Model', {
+        scale: { value: initialScale, min: 0.01, max: 2, step: 0.01, label: 'Scale' }
+    })
+
+    // CRITICAL: Check distance using the actual rendered model position
+    // Using modelRef.current.getWorldPosition() instead of scene.getWorldPosition()
+    // ensures we track the position of the actual rendered model, not the internal scene
+    useFrame(() => {
+        if (modelRef.current) {
+            const modelPosition = new THREE.Vector3()
+            modelRef.current.getWorldPosition(modelPosition)
+            checkDistanceAndPlay(modelPosition)
+        }
+    })
+
+    // Apply textures to the model
+    useEffect(() => {
+        scene.traverse(obj => {
+            if ((obj as THREE.Mesh).isMesh) {
+                const mesh = obj as THREE.Mesh
+                const mat = mesh.material as THREE.MeshStandardMaterial
+
+                // Apply textures
+                mat.map = colorMap
+                mat.normalMap = normalMap
+                mat.map.colorSpace = THREE.SRGBColorSpace
+                mat.map.anisotropy = 8
+                mat.normalMap.anisotropy = 8
+
+                // Material settings
+                mat.normalScale.set(1, 1)
+                mat.roughness = 0.9
+                mat.metalness = 0
+                mat.needsUpdate = true
+            }
+        })
+    }, [scene])
+
+    return (
+        <primitive 
+            ref={modelRef}
+            object={scene} 
+            scale={scale} 
+            position={[positionX, positionY, positionZ]} 
+            rotation={[rotationX, rotationY, rotationZ]}
+        >
+            {/* Attach positional audio to the model */}
+            <PositionalAudio ref={sound} url={audioUrl} />
+        </primitive>
+    )
+}
+```
+
+### 3. Add the Model to the Scene
+
+In `app/page.tsx`, import and add your model:
+
+```tsx
+import YourModel from './components/models/YourModel'
+
+export default function Home() {
+  return (
+    <main className="relative w-screen h-screen">
+      <Canvas shadows camera={{ position: [0, -2, 20], fov: 60 }}>
+        {/* ... other components ... */}
+        
+        <YourModel 
+          position={[5, 0, 0]}  // Position in the scene
+          scale={0.1}           // Scale of the model
+        />
+        
+        {/* ... other components ... */}
+      </Canvas>
+    </main>
+  )
+}
+```
+
+## ⚙️ Configuration Options
+
+### Props and Leva Controls Integration
+
+**Important**: To avoid conflicts between props passed from parent components and Leva controls:
+
+1. **Extract initial values from props**:
+```tsx
+const initialPosition = props.position || [0, 0, 0]
+const initialScale = props.scale || 0.2
+```
+
+2. **Use props as initial values in Leva controls**:
+```tsx
+const { positionX, positionY, positionZ } = useControls('Your Model', {
+    positionX: { value: initialPosition[0], min: -20, max: 20, step: 0.1, label: 'Position X' },
+    positionY: { value: initialPosition[1], min: -20, max: 20, step: 0.1, label: 'Position Y' },
+    positionZ: { value: initialPosition[2], min: -20, max: 20, step: 0.1, label: 'Position Z' }
+})
+```
+
+3. **Use Leva values in the primitive component**:
+```tsx
+<primitive 
+    ref={modelRef}
+    object={scene} 
+    scale={scale} 
+    position={[positionX, positionY, positionZ]} 
+    rotation={[rotationX, rotationY, rotationZ]}
+>
+```
+
+This ensures the model starts at the position defined by props but can be adjusted via Leva controls.
+
+### Audio Configuration
+
+The `usePositionalAudio` hook accepts these parameters:
+
+```typescript
+interface PositionalAudioConfig {
+  audioUrl: string              // Required: Path to audio file
+  triggerDistance?: number      // Distance to start playing (default: 8)
+  refDistance?: number          // Distance for max volume (default: 2)
+  maxDistance?: number          // Distance where audio stops (default: 8)
+  rolloffFactor?: number        // Volume falloff rate (default: 1)
+  loop?: boolean               // Whether to loop audio (default: false)
+}
+```
+
+### Model Properties
+
+The `primitive` component accepts standard Three.js properties:
+
+- `position`: [x, y, z] coordinates
+- `rotation`: [x, y, z] rotation in radians
+- `scale`: Uniform scale or [x, y, z] scale
+- `visible`: Boolean to show/hide the model
+
+## 🎨 Customization Examples
+
+### Simple Model (No Audio)
+
+```tsx
+export default function SimpleModel(props: any) {
+    const { scene } = useGLTF('/models/simple-model.glb')
+    
+    return (
+        <primitive object={scene} scale={0.2} {...props} />
+    )
+}
+```
+
+### Model with Custom Material
+
+```tsx
+export default function CustomMaterialModel(props: any) {
+    const { scene } = useGLTF('/models/custom-model.glb')
+    
+    useEffect(() => {
+        scene.traverse(obj => {
+            if ((obj as THREE.Mesh).isMesh) {
+                const mesh = obj as THREE.Mesh
+                const mat = mesh.material as THREE.MeshStandardMaterial
+                
+                // Custom material settings
+                mat.color.setHex(0xff0000)  // Red color
+                mat.roughness = 0.1         // Very smooth
+                mat.metalness = 0.8         // Very metallic
+                mat.needsUpdate = true
+            }
+        })
+    }, [scene])
+    
+    return <primitive object={scene} scale={0.2} {...props} />
+}
+```
+
+### Model with Looping Audio
+
+```tsx
+const { sound, checkDistanceAndPlay, audioUrl } = usePositionalAudio({
+    audioUrl: '/audio/ambient-sound.mp3',
+    triggerDistance: 10,
+    refDistance: 3,
+    maxDistance: 15,
+    rolloffFactor: 0.5,
+    loop: true  // Audio will loop continuously
+})
+```
+
+## 🔧 Troubleshooting
+
+### Model Not Loading
+- Check file path in `useGLTF()`
+- Ensure `.glb` file is in `public/models/`
+- Verify file format is supported
+
+### Textures Not Applying
+- Check texture file paths
+- Ensure texture files exist in `public/textures/`
+- Verify texture file formats (`.png`, `.jpg`)
+
+### Audio Not Playing
+- Check audio file path
+- Ensure user has interacted with the page (required for autoplay)
+- Verify audio file format (`.mp3` recommended)
+- Check browser console for errors
+
+### Audio Position Issues (CRITICAL)
+**Problem**: Audio triggers too late or from wrong position
+**Cause**: Using `scene.getWorldPosition()` instead of the actual rendered model position
+**Solution**: 
+1. Add `useRef` to track the rendered model: `const modelRef = useRef<THREE.Object3D>(null!)`
+2. Attach ref to primitive: `<primitive ref={modelRef} ...>`
+3. Use `modelRef.current.getWorldPosition()` in useFrame:
+```tsx
+useFrame(() => {
+    if (modelRef.current) {
+        const modelPosition = new THREE.Vector3()
+        modelRef.current.getWorldPosition(modelPosition)
+        checkDistanceAndPlay(modelPosition)
+    }
+})
+```
+**Why**: The scene's internal position might be offset from the actual rendered model position, causing audio to trigger from the wrong location.
+
+### Performance Issues
+- Reduce model polygon count
+- Optimize texture sizes (1024x1024 or smaller)
+- Compress audio files
+- Use `useGLTF.preload()` for critical models
+
+## 📚 Best Practices
+
+1. **File Naming**: Use descriptive, consistent names
+2. **Asset Optimization**: Compress models and textures
+3. **Audio Quality**: Use appropriate bitrates for audio files
+4. **Error Handling**: Add try-catch blocks for asset loading
+5. **TypeScript**: Add proper type definitions for props
+6. **Props Integration**: Use props as initial values for Leva controls to avoid conflicts
+7. **Position Tracking**: Always use refs for accurate world position calculation in audio systems
+6. **Documentation**: Comment complex material setups
+
+## 🎯 Example: Complete Fish Model
+
+```tsx
+'use client'
+import { useEffect } from 'react'
+import { useFrame } from '@react-three/fiber'
+import { PositionalAudio, useGLTF, useTexture } from '@react-three/drei'
+import { useControls } from 'leva'
+import { usePositionalAudio } from '../hooks/usePositionalAudio'
+import * as THREE from 'three'
+
+export default function FishModel(props: any) {
+    const { scene } = useGLTF('/models/fish.glb')
+    const [colorMap, normalMap] = useTexture([
+        '/textures/fish_color.png',
+        '/textures/fish_normal.png',
+    ])
+
+    const { sound, checkDistanceAndPlay, audioUrl } = usePositionalAudio({
+        audioUrl: '/audio/fish_bubbles.mp3',
+        triggerDistance: 6,
+        refDistance: 1.5,
+        maxDistance: 10,
+        rolloffFactor: 1.2,
+        loop: true
+    })
+
+    const { rotationX, rotationY, rotationZ } = useControls('Fish Rotation', {
+        rotationX: { value: 0, min: -Math.PI, max: Math.PI, step: 0.01, label: 'Rotation X' },
+        rotationY: { value: 0, min: -Math.PI, max: Math.PI, step: 0.01, label: 'Rotation Y' },
+        rotationZ: { value: 0, min: -Math.PI, max: Math.PI, step: 0.01, label: 'Rotation Z' }
+    })
+
+    useFrame(() => {
+        const fishPosition = new THREE.Vector3()
+        scene.getWorldPosition(fishPosition)
+        checkDistanceAndPlay(fishPosition)
+    })
+
+    useEffect(() => {
+        scene.traverse(obj => {
+            if ((obj as THREE.Mesh).isMesh) {
+                const mesh = obj as THREE.Mesh
+                const mat = mesh.material as THREE.MeshStandardMaterial
+
+                mat.map = colorMap
+                mat.normalMap = normalMap
+                mat.map.colorSpace = THREE.SRGBColorSpace
+                mat.map.anisotropy = 8
+                mat.normalMap.anisotropy = 8
+                mat.normalScale.set(1, 1)
+                mat.roughness = 0.7
+                mat.metalness = 0.1
+                mat.needsUpdate = true
+            }
+        })
+    }, [scene])
+
+    return (
+        <primitive 
+            object={scene} 
+            scale={0.15} 
+            position={[0, 0, 0]} 
+            {...props} 
+            rotation={[rotationX, rotationY, rotationZ]}
+        >
+            <PositionalAudio ref={sound} url={audioUrl} />
+        </primitive>
+    )
+}
+```
+
+This guide provides everything needed to add new 3D models with positional audio to your underwater scene! 

@@ -1,21 +1,23 @@
 'use client'
 
 import { Canvas, GLProps } from '@react-three/fiber'
-import { useControls } from 'leva'
+import { Leva, useControls } from 'leva'
 import Seabed from './components/Seabed'
 import MarineSnow from './components/MarineSnow'
 import KeyboardCamera from './components/KeyboardCamera'
 import { Fog, SRGBColorSpace, ACESFilmicToneMapping } from 'three'
 import { ScreenHUD } from './components/ScreenHUD'
-import PatricioModel from './components/PatricioModel'
+import PatricioModel from './components/models/PatricioModel'
+import KingCrab from './components/models/KingCrab'
 import Lights from './components/Lights'
+import { useDebugMode } from './hooks/useDebugMode'
 
 export default function Home() {
   // Controles de Leva para la cámara y escena
-  const { 
-    cameraX, 
-    cameraY, 
-    cameraZ, 
+  const {
+    cameraX,
+    cameraY,
+    cameraZ,
     cameraFOV,
     fogNear,
     fogFar,
@@ -30,8 +32,12 @@ export default function Home() {
     ambientIntensity: { value: 0.2, min: 0, max: 2, step: 0.1, label: 'Luz Ambiente' }
   })
 
+  const isDebugMode = useDebugMode()
+
   return (
     <main className="relative w-screen h-screen">
+      <Leva hidden={!isDebugMode} />
+
       <Canvas shadows camera={{ position: [cameraX, cameraY, cameraZ], fov: cameraFOV }} onCreated={({ gl, scene }) => {
         gl.outputColorSpace = SRGBColorSpace
         gl.toneMapping = ACESFilmicToneMapping   // opcional, queda lindo
@@ -47,7 +53,7 @@ export default function Home() {
         <fog attach="fog" args={['#000d1a', fogNear, fogFar]} />
         <KeyboardCamera speed={2} />
         <PatricioModel position={[0, 0, 0]} scale={0.05} />
-
+        <KingCrab position={[-0.2, -1.5, -20]} scale={2} />
       </Canvas>
       <ScreenHUD />
     </main>
