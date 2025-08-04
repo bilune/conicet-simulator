@@ -1,103 +1,55 @@
-import Image from "next/image";
+'use client'
+
+import { Canvas, GLProps } from '@react-three/fiber'
+import { useControls } from 'leva'
+import Seabed from './components/Seabed'
+import MarineSnow from './components/MarineSnow'
+import KeyboardCamera from './components/KeyboardCamera'
+import { Fog, SRGBColorSpace, ACESFilmicToneMapping } from 'three'
+import { ScreenHUD } from './components/ScreenHUD'
+import PatricioModel from './components/PatricioModel'
+import Lights from './components/Lights'
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  // Controles de Leva para la cámara y escena
+  const { 
+    cameraX, 
+    cameraY, 
+    cameraZ, 
+    cameraFOV,
+    fogNear,
+    fogFar,
+    ambientIntensity
+  } = useControls('Cámara y Escena', {
+    cameraX: { value: 0, min: -20, max: 20, step: 0.5, label: 'Posición X' },
+    cameraY: { value: -2, min: -10, max: 10, step: 0.5, label: 'Posición Y' },
+    cameraZ: { value: 20, min: 5, max: 50, step: 1, label: 'Posición Z' },
+    cameraFOV: { value: 60, min: 30, max: 120, step: 5, label: 'FOV' },
+    fogNear: { value: 8, min: 1, max: 30, step: 1, label: 'Niebla Cerca' },
+    fogFar: { value: 15, min: 10, max: 100, step: 5, label: 'Niebla Lejos' },
+    ambientIntensity: { value: 0.2, min: 0, max: 2, step: 0.1, label: 'Luz Ambiente' }
+  })
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
-  );
+  return (
+    <main className="relative w-screen h-screen">
+      <Canvas shadows camera={{ position: [cameraX, cameraY, cameraZ], fov: cameraFOV }} onCreated={({ gl, scene }) => {
+        gl.outputColorSpace = SRGBColorSpace
+        gl.toneMapping = ACESFilmicToneMapping   // opcional, queda lindo
+
+        scene.fog = new Fog("#000d1a", fogNear, fogFar);
+        gl.setClearColor("#000d1a");
+      }}>
+        <ambientLight intensity={ambientIntensity} />
+
+        <Lights />
+        <Seabed />
+        <MarineSnow count={5000} />
+        <fog attach="fog" args={['#000d1a', fogNear, fogFar]} />
+        <KeyboardCamera speed={2} />
+        <PatricioModel position={[0, 0, 0]} scale={0.05} />
+
+      </Canvas>
+      <ScreenHUD />
+    </main>
+  )
 }
