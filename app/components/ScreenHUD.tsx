@@ -24,7 +24,7 @@ export function ScreenHUD() {
     return (
       <div className="absolute inset-0 pointer-events-none z-10">
         {/* Elementos alineados a la izquierda */}
-        <div className="absolute bottom-12 sm:bottom-5 left-4 sm:left-5 text-white font-mono text-md sm:text-lg leading-relaxed font-bold w-48" style={{ textShadow: '-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000' }}>
+        <div className="absolute top-6 sm:top-auto sm:bottom-5 left-4 sm:left-5 text-white font-mono text-md sm:text-lg leading-relaxed font-bold w-48" style={{ textShadow: '-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000' }}>
           <div className="flex justify-between w-full">
             <span>HEADING</span>
             <span>337 °</span>
@@ -52,7 +52,7 @@ export function ScreenHUD() {
         </div>
         
         {/* Fecha centrada abajo */}
-        <div className="absolute bottom-2 sm:bottom-5 left-1/2 transform -translate-x-1/2 text-white font-mono text-lg sm:text-2xl font-bold text-center w-full" style={{ textShadow: '-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000' }}>
+        <div className="absolute bottom-36 z-10 sm:bottom-5 left-1/2 transform -translate-x-1/2 text-white font-mono text-lg sm:text-2xl font-bold text-center w-full" style={{ textShadow: '-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000' }}>
           {mounted && currentTime ? formatTime(currentTime) : 'Loading...'}
         </div>
       </div>

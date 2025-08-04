@@ -11,6 +11,7 @@ import PatricioModel from './components/models/PatricioModel'
 import KingCrab from './components/models/KingCrab'
 import Lights from './components/Lights'
 import { useDebugMode } from './hooks/useDebugMode'
+import OceanGlide from './components/models/OceanGlide'
 
 export default function Home() {
   // Controles de Leva para la cámara y escena
@@ -54,6 +55,10 @@ export default function Home() {
         <KeyboardCamera speed={2} />
         <PatricioModel position={[0, 0, 0]} scale={0.05} />
         <KingCrab position={[-0.2, -1.5, -20]} scale={2} />
+        <OceanGlide
+          position={[0, -1.8, 10]}  // Posición en la escena
+          scale={2.5}           // Escala del modelo
+        />
       </Canvas>
       <ScreenHUD />
     </main>
