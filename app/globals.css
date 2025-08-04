@@ -18,3 +18,13 @@ body {
   background: #000d1a;
   margin: 0;
 }
+
+/* en tu root o en el contenedor full-screen del juego */
+html, body {
+  overscroll-behavior: none;   /* bloquea pull-to-refresh y el rebote */
+  touch-action: none;          /* deshabilita gestos nativos (zoom, pan) */
+  overflow: hidden;            /* evita scroll */
+  height: 100%;
+  width: 100%;
+  margin: 0;
+}

@@ -31,11 +31,13 @@ export default function KeyboardCamera({ speed = 2 }) {
 
         // Controles táctiles (mobile)
         const onTouchStart = (e: TouchEvent) => {
+            e.preventDefault();
             touchStartY.current = e.touches[0].clientY
             touchActive.current = true
         }
 
         const onTouchMove = (e: TouchEvent) => {
+            e.preventDefault();
             if (!touchActive.current) return
             
             const touchY = e.touches[0].clientY
@@ -47,7 +49,8 @@ export default function KeyboardCamera({ speed = 2 }) {
             else direction.current = 0
         }
 
-        const onTouchEnd = () => {
+        const onTouchEnd = (e: TouchEvent) => {
+            e.preventDefault();
             direction.current = 0
             touchActive.current = false
         }
@@ -55,9 +58,9 @@ export default function KeyboardCamera({ speed = 2 }) {
         // Event listeners
         window.addEventListener('keydown', onKeyDown)
         window.addEventListener('keyup', onKeyUp)
-        window.addEventListener('touchstart', onTouchStart, { passive: true })
-        window.addEventListener('touchmove', onTouchMove, { passive: true })
-        window.addEventListener('touchend', onTouchEnd)
+        window.addEventListener('touchstart', onTouchStart, { passive: false })
+        window.addEventListener('touchmove', onTouchMove,  { passive: false })
+        window.addEventListener('touchend',  onTouchEnd,   { passive: false })
 
         return () => {
             window.removeEventListener('keydown', onKeyDown)

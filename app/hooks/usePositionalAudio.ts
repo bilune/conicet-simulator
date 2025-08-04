@@ -6,14 +6,26 @@ import * as THREE from 'three'
 // Hook para desbloquear el AudioContext después del primer gesto del usuario
 function useUnlockAudio(listener: THREE.AudioListener) {
   useEffect(() => {
-    const resume = () => {
+    const unlock = () => {
       const ctx = listener.context
-      if (ctx.state === 'suspended') ctx.resume()
-      window.removeEventListener('pointerdown', resume)
-      window.removeEventListener('keydown', resume)
+      if (ctx.state === 'suspended') {
+        ctx.resume().catch((err) => console.warn('AudioContext resume failed', err))
+      }
     }
-    window.addEventListener('pointerdown', resume)
-    window.addEventListener('keydown', resume)
+
+    // Attach once — y sin passive para poder llamar preventDefault si ya lo usás
+    window.addEventListener('pointerdown', unlock, { once: true, passive: false })
+    window.addEventListener('touchend', unlock, { once: true, passive: false })
+    window.addEventListener('keydown', unlock, { once: true })
+    window.addEventListener('keyup', unlock, { once: true })
+
+    // Cleanup
+    return () => {
+      window.removeEventListener('pointerdown', unlock)
+      window.removeEventListener('touchend', unlock)
+      window.removeEventListener('keydown', unlock)
+      window.removeEventListener('keyup', unlock)
+    }
   }, [listener])
 }
 
@@ -29,7 +41,7 @@ interface PositionalAudioConfig {
 
 // Hook personalizado para audio posicional
 export function usePositionalAudio(config: PositionalAudioConfig) {
-  const { 
+  const {
     audioUrl,
     triggerDistance = 8,
     refDistance = 2,
@@ -85,9 +97,9 @@ export function usePositionalAudio(config: PositionalAudioConfig) {
     }
   }
 
-  return { 
-    sound, 
+  return {
+    sound,
     checkDistanceAndPlay,
-    audioUrl 
+    audioUrl
   }
-} 
+}
